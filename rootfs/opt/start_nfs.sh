@@ -4,7 +4,7 @@ set -e
 
 # environment variables
 
-: ${EXPORT_PATH:="/data/nfs"}
+: ${EXPORT_PATH:="${SHARED_DIRECTORY:-/data/nfs}"}
 : ${PSEUDO_PATH:="/"}
 : ${EXPORT_ID:=0}
 : ${PROTOCOLS:=4}
@@ -52,16 +52,16 @@ bootstrap_config() {
     echo "* Writing configuration"
     cat <<END >${GANESHA_CONFIG}
 
+NFS_KRB5 { Active_krb5 = false; }
 NFSV4 { Graceless = ${GRACELESS}; }
 EXPORT{
     Export_Id = ${EXPORT_ID};
     Path = "${EXPORT_PATH}";
     Pseudo = "${PSEUDO_PATH}";
     FSAL {
-        name = VFS;
+        Name = VFS;
     }
-    Access_type = RW;
-    Disable_ACL = true;
+    Access_Type = RW;
     Squash = ${SQUASH_MODE};
     Protocols = ${PROTOCOLS};
 }
@@ -76,9 +76,7 @@ END
 
 sleep 0.5
 
-if [ ! -f ${EXPORT_PATH} ]; then
-    mkdir -p "${EXPORT_PATH}"
-fi
+mkdir -p "${EXPORT_PATH}"
 
 echo "Initializing Ganesha NFS server"
 echo "=================================="
@@ -91,6 +89,8 @@ init_dbus
 
 echo "Generated NFS-Ganesha config:"
 cat ${GANESHA_CONFIG}
+
+mkdir -p /var/run/ganesha
 
 echo "* Starting Ganesha-NFS"
 exec /usr/bin/ganesha.nfsd -F -L ${GANESHA_LOGFILE} -f ${GANESHA_CONFIG} -N ${VERBOSITY}
